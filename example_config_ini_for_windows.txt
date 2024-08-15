@@ -1,0 +1,6 @@
+{
+    "LOCAL_DESTINATION_FOLDER": "C:\\Pass\\To\\DESTINATION\\FOLDER",
+    "FILE_SYNC_ENDPOINT_URL": "http://localhost:9071/api/publish/cddp-contents/",
+    "KB_USERNAME": "Username",
+    "KB_PASSWORD": "********"
+}
