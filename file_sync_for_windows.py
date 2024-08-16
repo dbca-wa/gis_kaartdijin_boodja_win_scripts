@@ -127,7 +127,11 @@ def save_file_locally(file_content, file_path, local_path):
 print_with_timestamp('Starting the script...')
 
 # Open config file
-config_data = read_config_json()
+if len(sys.argv) > 1:
+    config_file_path = sys.argv[1]
+else:
+    config_file_path = 'config/config.ini'
+config_data = read_config_json(config_file_path)
 
 # Create local distination folder
 create_folder(config_data['LOCAL_DESTINATION_FOLDER'])
