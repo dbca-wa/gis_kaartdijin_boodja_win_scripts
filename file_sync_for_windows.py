@@ -64,7 +64,7 @@ def delete_file_remotely(api_url, username, password, file_path):
     # delete_file(api_url, file_path)
 
 
-def read_config_json(filename='config.ini'):
+def read_config_json(filename='config/config.ini'):
     """
     Read JSON data directly from a config.ini file located in the same folder as the script.
     Args: filename (str): Name of the config file. Default is 'config.ini'.
