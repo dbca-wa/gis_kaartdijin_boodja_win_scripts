@@ -2,6 +2,7 @@ import sys
 import os
 import requests
 import json
+import shutil
 from datetime import datetime
 
 
@@ -37,22 +38,48 @@ def fetch_file_list(api_url, username, password):
 
 
 @handle_exceptions
-def retrieve_file_content(api_url, username, password, file_path):
-    # Retrieve file content from the API
-    api_url = os.path.join(api_url, 'retrieve-file')
-    print_with_timestamp(f"Retrieving file content from: {api_url} with filepath: {file_path}")
-    response = requests.get(api_url, auth=(username, password), params={'filepath': file_path})
+def download_file_and_get_path(api_url, username, password, file_path, download_dir="."):
+    """
+    Downloads a file from the API via streaming and saves it locally.
+    Returns the path to the saved file on success.
+    """
+    # Note: Using os.path.join for a URL is not ideal, but we'll keep it for consistency with the original code.
+    # A better approach is url = api_url.rstrip('/') + '/retrieve-file'
+    endpoint_url = os.path.join(api_url, 'retrieve-file')
+    print_with_timestamp(f"Downloading file from: {endpoint_url} with filepath: {file_path}")
+
+    # Use stream=True to enable streaming mode for the response.
+    response = requests.get(endpoint_url, auth=(username, password), params={'filepath': file_path}, stream=True)
     response.raise_for_status()
-    
-    # Return the file content
-    print_with_timestamp("File content retrieved successfully.")
-    return response.content
+
+    # Determine the destination file path.
+    local_filename = os.path.join(download_dir, os.path.basename(file_path))
+    print_with_timestamp(f"Saving file to: {local_filename}")
+
+    # Write the file to disk chunk by chunk.
+    try:
+        with open(local_filename, 'wb') as f:
+            # shutil.copyfileobj provides an efficient way to write the stream to a file.
+            shutil.copyfileobj(response.raw, f)
+            # Alternatively, you can iterate manually:
+            # for chunk in response.iter_content(chunk_size=8192): 
+            #     f.write(chunk)
         
+        print_with_timestamp("File downloaded successfully.")
+        # Return the path to the saved file
+        return local_filename
+    except Exception as e:
+        # If an error occurs, clean up the partially downloaded file.
+        if os.path.exists(local_filename):
+            os.remove(local_filename)
+        print_with_timestamp(f"Failed to write file: {e}")
+        raise # Re-raise the exception to signal failure.
+
 
 @handle_exceptions
 def delete_file_remotely(api_url, username, password, file_path):
     # Destroy the file using the API
-    api_url = os.path.join(api_url, 'delete-file')
+    api_url = api_url.rstrip('/') + '/delete-file/'
     response = requests.delete(api_url, auth=(username, password), params={'filepath': file_path})
     response.raise_for_status()
     
@@ -100,29 +127,6 @@ def create_folder(folder_path):
             print_with_timestamp(f"Failed to create folder '{folder_path}': {e}")
 
 
-def save_file_locally(file_content, file_path, local_path):
-    try:
-        # Normalize paths to handle different path separators
-        file_path = os.path.normpath(file_path)
-        local_path = os.path.normpath(local_path)
-
-        # Save the file locally
-        local_file_path = os.path.join(local_path, file_path)
-
-        # Ensure the directory for the local file path exists
-        local_file_dir = os.path.dirname(local_file_path)
-        if not os.path.exists(local_file_dir):
-            os.makedirs(local_file_dir)
-
-        with open(local_file_path, 'wb') as local_file:
-            local_file.write(file_content)
-        
-        print_with_timestamp(f"File [{local_file_path}] saved locally successfully")
-
-    except Exception as e:
-        print_with_timestamp(f"An error occurred while saving the file locally: {e}")
-
-
 # Start this script
 print_with_timestamp('Starting the script...')
 
@@ -153,10 +157,8 @@ for file_info in response['results']:
     count += 1
     print_with_timestamp(f"--- File#{count} (out of {total_files}) files ---")
 
-    # Retrieve file contents
-    file_content = retrieve_file_content(config_data['FILE_SYNC_ENDPOINT_URL'], config_data['KB_USERNAME'], config_data['KB_PASSWORD'], file_info['filepath'])
-    if file_content:
-        # Save file contents locally
-        save_file_locally(file_content, file_info['filepath'], config_data['LOCAL_DESTINATION_FOLDER'])
+    # Download file and get local path
+    local_file_path = download_file_and_get_path(config_data['FILE_SYNC_ENDPOINT_URL'], config_data['KB_USERNAME'], config_data['KB_PASSWORD'], file_info['filepath'], config_data['LOCAL_DESTINATION_FOLDER'])
+    if local_file_path:
         # Destroy file from the server
         delete_file_remotely(config_data['FILE_SYNC_ENDPOINT_URL'], config_data['KB_USERNAME'], config_data['KB_PASSWORD'], file_info['filepath'])
