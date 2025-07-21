@@ -52,7 +52,8 @@ def retrieve_file_content(api_url, username, password, file_path):
 @handle_exceptions
 def delete_file_remotely(api_url, username, password, file_path):
     # Destroy the file using the API
-    api_url = os.path.join(api_url, 'delete-file')
+    # api_url = os.path.join(api_url, 'delete-file')
+    api_url = api_url.rstrip('/') + '/delete-file/'
     response = requests.delete(api_url, auth=(username, password), params={'filepath': file_path})
     response.raise_for_status()
     
