@@ -53,7 +53,8 @@ def download_file_and_get_path(api_url, username, password, file_path, download_
     response.raise_for_status()
 
     # Determine the destination file path.
-    local_filename = os.path.join(download_dir, os.path.basename(file_path))
+    # local_filename = os.path.join(download_dir, os.path.basename(file_path))
+    local_filename = os.path.join(download_dir, file_path)
     print_with_timestamp(f"Saving file to: {local_filename}")
 
     # Write the file to disk chunk by chunk.
