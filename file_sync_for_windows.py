@@ -52,9 +52,15 @@ def download_file_and_get_path(api_url, username, password, file_path, download_
     response = requests.get(endpoint_url, auth=(username, password), params={'filepath': file_path}, stream=True)
     response.raise_for_status()
 
-    # Determine the destination file path.
-    local_filename = os.path.join(download_dir, os.path.basename(file_path))
+    # Determine the destination file path, preserving the subdirectory structure
+    # returned by the API (e.g. "GDB/somefile.gdb" -> download_dir/GDB/somefile.gdb).
+    local_filename = os.path.join(download_dir, file_path)
     print_with_timestamp(f"Saving file to: {local_filename}")
+
+    # Ensure the destination directory exists before writing.
+    local_file_dir = os.path.dirname(local_filename)
+    if local_file_dir and not os.path.exists(local_file_dir):
+        os.makedirs(local_file_dir)
 
     # Write the file to disk chunk by chunk.
     try:
